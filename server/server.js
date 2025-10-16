@@ -6,6 +6,7 @@ require('dotenv').config();
 const { router: authRoutes } = require('./routes/auth');
 const streamRoutes = require('./routes/stream');
 const userRoutes = require('./routes/user');
+const chatRoutes = require('./routes/chat');
 const { initializeWebSocket } = require('./websocket/chat');
 
 const app = express();
@@ -26,6 +27,7 @@ app.use(express.static(path.join(__dirname, '../client')));
 app.use('/api/auth', authRoutes);
 app.use('/api/stream', streamRoutes);
 app.use('/api/user', userRoutes);
+app.use('/api/chat', chatRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -34,6 +36,17 @@ app.get('/api/health', (req, res) => {
         timestamp: new Date().toISOString(),
         version: process.env.npm_package_version || '1.0.0'
     });
+});
+
+
+// Serve channel.html for /:username (not API, not static file)
+app.get('/:username', (req, res, next) => {
+    const username = req.params.username;
+    // Ignore API and static files
+    if (username.startsWith('api') || username.includes('.') || username === 'favicon.ico') {
+        return next();
+    }
+    res.sendFile(path.join(__dirname, '../client/channel.html'));
 });
 
 // Serve frontend for all other routes (SPA)

@@ -20,8 +20,15 @@
                     <button id="register-btn" class="btn btn-secondary">Đăng ký</button>
                 </div>
                 <div id="user-section" class="hidden">
-                    <span id="user-name" class="user-name"></span>
-                    <button id="logout-btn" class="btn btn-danger">Đăng xuất</button>
+                    <div class="user-dropdown">
+                        <span id="user-name" class="user-name"></span>
+                        <button id="user-dropdown-btn" class="btn btn-secondary">▼</button>
+                        <div id="user-dropdown-menu" class="dropdown-menu hidden">
+                            <a id="my-channel-link" href="#">Kênh của tôi</a>
+                            <a href="#" id="dashboard-link">Dashboard</a>
+                            <button id="logout-btn" class="btn btn-danger" style="width:100%;margin-top:8px;">Đăng xuất</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </header>
@@ -62,58 +69,16 @@
             </div>
         </div>
 
-        <main class="main-content">
-            <!-- Live Stream Section -->
-            <section class="stream-section">
-                <div class="video-container">
-                    <video id="video-player" class="video-player" playsinline></video>
-                    <div class="video-controls">
-                        <button id="play-btn" class="btn btn-primary">Play</button>
-                        <button id="pause-btn" class="btn btn-secondary">Pause</button>
-                    </div>
-                    <div class="stream-info">
-                        <h2 id="stream-title">Live Stream</h2>
-                        <div class="stream-stats">
-                            <span id="viewer-count">0 người xem</span>
-                            <span id="stream-status" class="offline">Offline</span>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Chat Section -->
-            <section class="chat-section">
-                <div class="chat-container">
-                    <div class="chat-header">
-                        <h3>💬 Chat</h3>
-                    </div>
-                    <div id="chat-messages" class="chat-messages"></div>
-                    <div class="chat-input">
-                        <input type="text" id="chat-input" placeholder="Nhập tin nhắn..." disabled>
-                        <button id="send-chat" class="btn btn-primary" disabled>Gửi</button>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Stream Management (for authenticated users) -->
-            <section id="stream-management" class="stream-management hidden">
-                <div class="management-container">
-                    <h3>🎬 Quản lý Stream</h3>
-                    <div class="stream-controls">
-                        <button id="start-stream" class="btn btn-success">Bắt đầu Stream</button>
-                        <button id="stop-stream" class="btn btn-danger" disabled>Dừng Stream</button>
-                        <div class="stream-key-info">
-                            <label>Stream Key:</label>
-                            <input type="text" id="stream-key" readonly>
-                            <button id="copy-key" class="btn btn-secondary">Sao chép</button>
-                        </div>
-                        <div class="ingest-server-info">
-                            <label>OBS Ingest Server:</label>
-                            <input type="text" id="ingest-server" readonly>
-                            <button id="copy-ingest" class="btn btn-secondary">Sao chép</button>
-                        </div>
-                    </div>
-                </div>
+        <main class="main-content homepage-layout">
+            <aside class="sidebar">
+                <h3 class="sidebar-title">For You</h3>
+                <ul id="sidebar-list" class="sidebar-list">
+                    <!-- Dynamic sidebar content will be loaded here -->
+                </ul>
+            </aside>
+            <section class="live-list-section homepage-main">
+                <h2>🔴 Đang phát trực tiếp</h2>
+                <div id="live-list" class="live-list-grid"></div>
             </section>
         </main>
 
@@ -127,9 +92,11 @@
         <div id="toast-container" class="toast-container"></div>
     </div>
 
-    <script src="js/auth.js"></script>
-    <script src="js/stream.js"></script>
-    <script src="js/chat.js"></script>
-    <script src="js/app.js"></script>
+        <script src="js/auth.js"></script>
+        <script src="js/stream.js"></script>
+        <script src="js/chat.js"></script>
+        <script src="js/home.js"></script>
+        <script src="js/app.js"></script>
+        <script src="js/dropdown.js"></script>
 </body>
 </html>

@@ -1,10 +1,10 @@
 const WebSocket = require('ws');
 const { CognitoJwtVerifier } = require('aws-jwt-verify');
 
-// Initialize JWT verifier
+// Initialize JWT verifier for ID tokens (to get preferred_username)
 const verifier = CognitoJwtVerifier.create({
     userPoolId: process.env.COGNITO_USER_POOL_ID,
-    tokenUse: 'access',
+    tokenUse: 'id', // Changed from 'access' to 'id'
     clientId: process.env.COGNITO_CLIENT_ID
 });
 
@@ -129,10 +129,13 @@ async function handleAuth(clientId, message) {
     const client = clients.get(clientId);
     if (!client) return;
 
+    console.log(`[AUTH] Received auth request from client ${clientId}`);
+
     try {
         const { token } = message;
         
         if (!token) {
+            console.log(`[AUTH] No token provided by client ${clientId}`);
             sendToClient(clientId, {
                 type: 'authFailed',
                 message: 'Thiếu token xác thực'
@@ -140,12 +143,15 @@ async function handleAuth(clientId, message) {
             return;
         }
 
+        console.log(`[AUTH] Verifying token for client ${clientId}...`);
         // Verify JWT token with Cognito
         const payload = await verifier.verify(token);
         
+        console.log(`[AUTH] Token verified successfully for client ${clientId}`, payload.sub);
+        
         client.user = {
             sub: payload.sub,
-            username: payload.username,
+            username: payload.preferred_username || payload['cognito:username'] || payload.email,
             email: payload.email,
             emailVerified: payload.email_verified
         };

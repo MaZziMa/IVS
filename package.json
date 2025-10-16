@@ -22,11 +22,14 @@
     "@aws-sdk/client-cognito-identity-provider": "^3.400.0",
     "@aws-sdk/client-dynamodb": "^3.400.0",
     "@aws-sdk/client-ivs": "^3.400.0",
+    "@aws-sdk/client-ivschat": "^3.400.0",
     "@aws-sdk/lib-dynamodb": "^3.400.0",
+    "amazon-ivs-chat-messaging": "^1.1.1",
     "aws-jwt-verify": "^4.0.1",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
+    "pm2": "^6.0.13",
     "ws": "^8.18.3"
   },
   "devDependencies": {

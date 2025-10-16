@@ -58,8 +58,8 @@ class App {
 
     async loadInitialData() {
         try {
-            // Load stream information nếu có
-            if (streamService) {
+            // Load stream information nếu có (only on homepage, not on channel page)
+            if (typeof streamService !== 'undefined' && streamService) {
                 await streamService.checkStreamStatus();
             }
         } catch (error) {
@@ -70,7 +70,7 @@ class App {
     setupPeriodicUpdates() {
         // Update viewer count every 15 seconds
         setInterval(() => {
-            if (streamService && streamService.isStreamLive()) {
+            if (typeof streamService !== 'undefined' && streamService && streamService.isStreamLive()) {
                 this.updateViewerCount();
             }
         }, 15000);
@@ -199,11 +199,8 @@ class App {
             return;
         }
 
-        // Check chat connection
-        if (chatService && !chatService.isConnected()) {
-            console.warn('Chat service disconnected, attempting to reconnect...');
-            chatService.connectWebSocket();
-        }
+        // Chat connection is handled automatically by IVS Chat SDK
+        // No need to manually check or reconnect
     }
 }
 

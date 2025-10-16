@@ -20,7 +20,7 @@ class StreamService {
 
     initPlayer() {
         const videoElement = document.getElementById('video-player');
-        
+        if (!videoElement) return;
         if (
             window.IVSPlayer &&
             typeof window.IVSPlayer.isPlayerSupported === 'function' &&
@@ -28,22 +28,18 @@ class StreamService {
         ) {
             this.player = window.IVSPlayer.create();
             this.player.attachHTMLVideoElement(videoElement);
-
             // Player event listeners
             this.player.addEventListener(window.IVSPlayer.PlayerState.READY, () => {
                 console.log('Player is ready');
             });
-
             this.player.addEventListener(window.IVSPlayer.PlayerState.PLAYING, () => {
                 console.log('Stream is playing');
                 this.updateStreamStatus(true);
             });
-
             this.player.addEventListener(window.IVSPlayer.PlayerState.ENDED, () => {
                 console.log('Stream ended');
                 this.updateStreamStatus(false);
             });
-
             this.player.addEventListener(window.IVSPlayer.PlayerEventType.ERROR, (error) => {
                 console.error('Player error:', error);
                 showToast('Lỗi phát video', 'error');
@@ -56,22 +52,19 @@ class StreamService {
 
     setupFallbackPlayer(videoElement) {
         // Fallback: Sử dụng HLS.js nếu có
+        if (!videoElement) return;
         console.log('Setting up fallback player');
-        
         videoElement.addEventListener('loadstart', () => {
             console.log('Video loading started');
         });
-
         videoElement.addEventListener('canplay', () => {
             console.log('Video can play');
             this.updateStreamStatus(true);
         });
-
         videoElement.addEventListener('ended', () => {
             console.log('Video ended');
             this.updateStreamStatus(false);
         });
-
         videoElement.addEventListener('error', (error) => {
             // Chỉ log error, không hiển thị toast vì có thể là do chưa có stream
             console.log('Video playback error (stream may not be live yet):', error);
@@ -86,9 +79,10 @@ class StreamService {
         const pauseBtn = document.getElementById('pause-btn');
         const videoElement = document.getElementById('video-player');
 
-        startStreamBtn.addEventListener('click', () => this.startStream());
-        stopStreamBtn.addEventListener('click', () => this.stopStream());
-        copyKeyBtn.addEventListener('click', () => this.copyStreamKey());
+        // Only add event listeners if all elements exist
+        if (startStreamBtn) startStreamBtn.addEventListener('click', () => this.startStream());
+        if (stopStreamBtn) stopStreamBtn.addEventListener('click', () => this.stopStream());
+        if (copyKeyBtn) copyKeyBtn.addEventListener('click', () => this.copyStreamKey());
 
         // Play/Pause controls
         if (playBtn && pauseBtn && videoElement) {
@@ -294,19 +288,21 @@ class StreamService {
 
         if (streamData) {
             // Cập nhật stream key
-            if (streamData.streamKey) {
+            if (streamData.streamKey && streamKey) {
                 streamKey.value = streamData.streamKey;
             }
 
             // Cập nhật ingest server cho OBS (IVS sử dụng RTMPS với port 443)
-            if (streamData.ingestEndpoint) {
-                ingestServer.value = `rtmps://${streamData.ingestEndpoint}:443/app/`;
-            } else {
-                ingestServer.value = '';
+            if (ingestServer) {
+                if (streamData.ingestEndpoint) {
+                    ingestServer.value = `rtmps://${streamData.ingestEndpoint}:443/app/`;
+                } else {
+                    ingestServer.value = '';
+                }
             }
 
             // Cập nhật tiêu đề
-            if (streamData.title) {
+            if (streamData.title && streamTitle) {
                 streamTitle.textContent = streamData.title;
             }
 
@@ -326,20 +322,22 @@ class StreamService {
             }
 
             // Cập nhật trạng thái buttons
-            if (streamData.isLive) {
-                startBtn.disabled = true;
-                stopBtn.disabled = false;
-                this.updateStreamStatus(true);
-                
-                // Load stream khi đang live (bỏ kiểm tra !this.isLive)
-                if (streamData.playbackUrl) {
-                    console.log('Loading stream from updateUI:', streamData.playbackUrl);
-                    this.loadStream(streamData.playbackUrl);
+            if (startBtn && stopBtn) {
+                if (streamData.isLive) {
+                    startBtn.disabled = true;
+                    stopBtn.disabled = false;
+                    this.updateStreamStatus(true);
+                    
+                    // Load stream khi đang live (bỏ kiểm tra !this.isLive)
+                    if (streamData.playbackUrl) {
+                        console.log('Loading stream from updateUI:', streamData.playbackUrl);
+                        this.loadStream(streamData.playbackUrl);
+                    }
+                } else {
+                    startBtn.disabled = false;
+                    stopBtn.disabled = true;
+                    this.updateStreamStatus(false);
                 }
-            } else {
-                startBtn.disabled = false;
-                stopBtn.disabled = true;
-                this.updateStreamStatus(false);
             }
 
             // Cập nhật viewer count
@@ -347,12 +345,20 @@ class StreamService {
                 this.viewerCount = streamData.viewerCount;
                 this.updateViewerCount();
             }
+
+            // Connect to chat if available
+            if (streamData.chatRoomArn && authService.isAuthenticated()) {
+                console.log('Connecting to chat room:', streamData.chatRoomArn);
+                chatService.connectToChat(streamData.chatRoomArn);
+            }
         }
     }
 
     updateStreamStatus(isLive) {
         this.isLive = isLive;
         const statusElement = document.getElementById('stream-status');
+        
+        if (!statusElement) return; // Element doesn't exist on this page
         
         if (isLive) {
             statusElement.textContent = 'Live';
@@ -365,7 +371,9 @@ class StreamService {
 
     updateViewerCount() {
         const viewerCountElement = document.getElementById('viewer-count');
-        viewerCountElement.textContent = `${this.viewerCount} người xem`;
+        if (viewerCountElement) {
+            viewerCountElement.textContent = `${this.viewerCount} người xem`;
+        }
     }
 
     copyStreamKey() {
@@ -401,7 +409,25 @@ class StreamService {
 let streamService;
 
 function initStreamService() {
+    // Check if we're on a channel page by looking for channel-specific elements
+    const isChannelPage = document.querySelector('.channel-page') !== null;
+    
+    // Check if we have stream controls on the page (for dashboard/stream management)
+    const hasStreamControls = document.getElementById('start-stream') !== null || 
+                              document.getElementById('stream-key') !== null;
+    
+    if (isChannelPage) {
+        console.log('Skipping StreamService init - on channel page');
+        return;
+    }
+    
+    if (!hasStreamControls) {
+        console.log('Skipping StreamService init - no stream controls found');
+        return;
+    }
+    
     if (!streamService) {
+        console.log('Initializing StreamService');
         streamService = new StreamService();
     }
 }

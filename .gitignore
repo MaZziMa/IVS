@@ -3,6 +3,7 @@ node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
 
 # Environment variables
 .env
@@ -10,11 +11,19 @@ yarn-error.log*
 .env.development.local
 .env.test.local
 .env.production.local
+.env.*.local
 
 # Logs
 logs/
 *.log
 loglevel.json
+
+# PM2
+.pm2/
+pids/
+*.pid
+*.seed
+*.pid.lock
 
 # Runtime data
 pids/
@@ -24,17 +33,29 @@ pids/
 
 # Coverage directory used by tools like istanbul
 coverage/
+*.lcov
+.nyc_output/
+
+# Testing
+.jest/
+junit.xml
 
 # Build outputs
 build/
 dist/
+out/
 
 # IDE files
 .vscode/
+!.vscode/extensions.json
+!.vscode/settings.json.example
 .idea/
 *.swp
 *.swo
 *~
+.project
+.classpath
+.settings/
 
 # OS generated files
 .DS_Store
@@ -44,18 +65,73 @@ dist/
 .Trashes
 ehthumbs.db
 Thumbs.db
+desktop.ini
 
 # AWS
 .aws/
+aws-exports.js
+awsconfiguration.json
+
+# AWS Credentials (CRITICAL - never commit!)
+**/aws-credentials.json
+**/credentials
+**/config
 
 # Temporary files
 tmp/
 temp/
+*.tmp
+*.temp
 
 # Package managers
 package-lock.json
 yarn.lock
+pnpm-lock.yaml
 
 # Local development
 .cache/
 .temp/
+.serverless/
+.webpack/
+
+# Media files (if you don't want to commit large files)
+# *.mp4
+# *.mov
+# *.avi
+# *.mkv
+# *.flv
+# *.wmv
+
+# Database files (local development)
+*.db
+*.sqlite
+*.sqlite3
+
+# Mac files
+**/.DS_Store
+
+# Windows files
+Thumbs.db
+ehthumbs.db
+
+# Linux files
+*~
+
+# Editor backups
+*.bak
+*.backup
+*.old
+
+# Certificate files
+*.pem
+*.key
+*.crt
+*.cer
+*.p12
+*.pfx
+
+# SSH keys
+id_rsa
+id_rsa.pub
+id_ed25519
+id_ed25519.pub

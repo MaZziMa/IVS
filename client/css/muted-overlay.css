@@ -1,0 +1,36 @@
+﻿/* Muted Overlay for Video Autoplay */
+.video-container {
+    position: relative;
+}
+
+.muted-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 20px 40px;
+    border-radius: 12px;
+    cursor: pointer;
+    z-index: 10;
+    pointer-events: none;
+    transition: opacity 0.3s;
+}
+
+.muted-overlay.hidden {
+    opacity: 0;
+    display: none;
+}
+
+.muted-message {
+    text-align: center;
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.muted-message small {
+    font-size: 0.9rem;
+    opacity: 0.8;
+    font-weight: 400;
+}
