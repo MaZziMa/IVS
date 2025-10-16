@@ -356,18 +356,6 @@ npm start
 - [AWS Cognito](https://docs.aws.amazon.com/cognito/)
 - [DynamoDB](https://docs.aws.amazon.com/dynamodb/)
 
-## 🤝 Đóng Góp
-
-1. Fork repository
-2. Tạo feature branch
-3. Commit changes
-4. Push to branch
-5. Tạo Pull Request
-
-## 📄 License
-
-MIT License - xem file [LICENSE](LICENSE) để biết thêm chi tiết.
-
 ## 🆘 Hỗ Trợ
 
 Nếu gặp vấn đề:
