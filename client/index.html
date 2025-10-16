@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AWS IVS Streaming App</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <!-- AWS IVS Player -->
+    <script src="https://player.live-video.net/1.26.0/amazon-ivs-player.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <header class="header">
+            <h1>🎥 Live Streaming Platform</h1>
+            <div class="auth-controls">
+                <div id="auth-section">
+                    <button id="login-btn" class="btn btn-primary">Đăng nhập</button>
+                    <button id="register-btn" class="btn btn-secondary">Đăng ký</button>
+                </div>
+                <div id="user-section" class="hidden">
+                    <span id="user-name" class="user-name"></span>
+                    <button id="logout-btn" class="btn btn-danger">Đăng xuất</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Authentication Modal -->
+        <div id="auth-modal" class="modal hidden">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <div id="login-form" class="auth-form">
+                    <h2>Đăng nhập</h2>
+                    <form id="login-form-element">
+                        <input type="email" id="login-email" placeholder="Email" required>
+                        <input type="password" id="login-password" placeholder="Mật khẩu" required>
+                        <button type="submit" class="btn btn-primary">Đăng nhập</button>
+                    </form>
+                    <p>Chưa có tài khoản? <a href="#" id="switch-to-register">Đăng ký ngay</a></p>
+                </div>
+                
+                <div id="register-form" class="auth-form hidden">
+                    <h2>Đăng ký</h2>
+                    <form id="register-form-element">
+                        <input type="text" id="register-username" placeholder="Tên người dùng" required>
+                        <input type="email" id="register-email" placeholder="Email" required>
+                        <input type="password" id="register-password" placeholder="Mật khẩu" required>
+                        <button type="submit" class="btn btn-primary">Đăng ký</button>
+                    </form>
+                    <p>Đã có tài khoản? <a href="#" id="switch-to-login">Đăng nhập</a></p>
+                </div>
+                
+                <div id="confirm-form" class="auth-form hidden">
+                    <h2>Xác nhận email</h2>
+                    <p>Vui lòng nhập mã xác nhận đã gửi đến email của bạn.</p>
+                    <form id="confirm-form-element">
+                        <input type="text" id="confirm-code" placeholder="Mã xác nhận" required>
+                        <button type="submit" class="btn btn-primary">Xác nhận</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <main class="main-content">
+            <!-- Live Stream Section -->
+            <section class="stream-section">
+                <div class="video-container">
+                    <video id="video-player" class="video-player" controls playsinline></video>
+                    <div class="stream-info">
+                        <h2 id="stream-title">Live Stream</h2>
+                        <div class="stream-stats">
+                            <span id="viewer-count">0 người xem</span>
+                            <span id="stream-status" class="offline">Offline</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Chat Section -->
+            <section class="chat-section">
+                <div class="chat-container">
+                    <div class="chat-header">
+                        <h3>💬 Chat</h3>
+                    </div>
+                    <div id="chat-messages" class="chat-messages"></div>
+                    <div class="chat-input">
+                        <input type="text" id="chat-input" placeholder="Nhập tin nhắn..." disabled>
+                        <button id="send-chat" class="btn btn-primary" disabled>Gửi</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Stream Management (for authenticated users) -->
+            <section id="stream-management" class="stream-management hidden">
+                <div class="management-container">
+                    <h3>🎬 Quản lý Stream</h3>
+                    <div class="stream-controls">
+                        <button id="start-stream" class="btn btn-success">Bắt đầu Stream</button>
+                        <button id="stop-stream" class="btn btn-danger" disabled>Dừng Stream</button>
+                        <div class="stream-key-info">
+                            <label>Stream Key:</label>
+                            <input type="text" id="stream-key" readonly>
+                            <button id="copy-key" class="btn btn-secondary">Sao chép</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Loading Spinner -->
+        <div id="loading" class="loading hidden">
+            <div class="spinner"></div>
+            <p>Đang tải...</p>
+        </div>
+
+        <!-- Toast Messages -->
+        <div id="toast-container" class="toast-container"></div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/stream.js"></script>
+    <script src="js/chat.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
