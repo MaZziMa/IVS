@@ -298,9 +298,9 @@ class StreamService {
                 streamKey.value = streamData.streamKey;
             }
 
-            // Cập nhật ingest server cho OBS
+            // Cập nhật ingest server cho OBS (IVS sử dụng RTMPS với port 443)
             if (streamData.ingestEndpoint) {
-                ingestServer.value = `rtmp://${streamData.ingestEndpoint}:1935/app/`;
+                ingestServer.value = `rtmps://${streamData.ingestEndpoint}:443/app/`;
             } else {
                 ingestServer.value = '';
             }
