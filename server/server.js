@@ -3,7 +3,7 @@ const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
 
-const authRoutes = require('./routes/auth');
+const { router: authRoutes } = require('./routes/auth');
 const streamRoutes = require('./routes/stream');
 const userRoutes = require('./routes/user');
 const { initializeWebSocket } = require('./websocket/chat');

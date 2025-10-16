@@ -11,16 +11,24 @@ class StreamService {
     async init() {
         this.initPlayer();
         this.setupEventListeners();
-        await this.checkStreamStatus();
+        
+        // Chỉ check stream status nếu đã đăng nhập
+        if (authService && authService.isAuthenticated()) {
+            await this.checkStreamStatus();
+        }
     }
 
     initPlayer() {
         const videoElement = document.getElementById('video-player');
         
-        if (window.IVSPlayer && window.IVSPlayer.isPlayerSupported()) {
+        if (
+            window.IVSPlayer &&
+            typeof window.IVSPlayer.isPlayerSupported === 'function' &&
+            window.IVSPlayer.isPlayerSupported()
+        ) {
             this.player = window.IVSPlayer.create();
             this.player.attachHTMLVideoElement(videoElement);
-            
+
             // Player event listeners
             this.player.addEventListener(window.IVSPlayer.PlayerState.READY, () => {
                 console.log('Player is ready');
@@ -40,7 +48,6 @@ class StreamService {
                 console.error('Player error:', error);
                 showToast('Lỗi phát video', 'error');
             });
-
         } else {
             console.warn('IVS Player not supported, falling back to native video');
             this.setupFallbackPlayer(videoElement);
@@ -48,7 +55,9 @@ class StreamService {
     }
 
     setupFallbackPlayer(videoElement) {
-        // Fallback cho trình duyệt không hỗ trợ IVS Player
+        // Fallback: Sử dụng HLS.js nếu có
+        console.log('Setting up fallback player');
+        
         videoElement.addEventListener('loadstart', () => {
             console.log('Video loading started');
         });
@@ -64,8 +73,8 @@ class StreamService {
         });
 
         videoElement.addEventListener('error', (error) => {
-            console.error('Video error:', error);
-            this.updateStreamStatus(false);
+            // Chỉ log error, không hiển thị toast vì có thể là do chưa có stream
+            console.log('Video playback error (stream may not be live yet):', error);
         });
     }
 
@@ -73,10 +82,28 @@ class StreamService {
         const startStreamBtn = document.getElementById('start-stream');
         const stopStreamBtn = document.getElementById('stop-stream');
         const copyKeyBtn = document.getElementById('copy-key');
+        const playBtn = document.getElementById('play-btn');
+        const pauseBtn = document.getElementById('pause-btn');
+        const videoElement = document.getElementById('video-player');
 
         startStreamBtn.addEventListener('click', () => this.startStream());
         stopStreamBtn.addEventListener('click', () => this.stopStream());
         copyKeyBtn.addEventListener('click', () => this.copyStreamKey());
+
+        // Play/Pause controls
+        if (playBtn && pauseBtn && videoElement) {
+            playBtn.addEventListener('click', () => {
+                // Nếu có buffered, tua đến cuối để giảm delay
+                if (videoElement.buffered && videoElement.buffered.length > 0) {
+                    const latest = videoElement.buffered.end(videoElement.buffered.length - 1);
+                    videoElement.currentTime = latest;
+                }
+                videoElement.play();
+            });
+            pauseBtn.addEventListener('click', () => {
+                videoElement.pause();
+            });
+        }
 
         // Tự động kiểm tra trạng thái stream
         setInterval(() => {
@@ -97,8 +124,9 @@ class StreamService {
                 this.streamData = data;
                 this.updateUI(data);
                 
-                // Nếu có playback URL, load stream
-                if (data.playbackUrl && !this.isLive) {
+                // Load stream khi đang live (bỏ kiểm tra !this.isLive)
+                if (data.playbackUrl && data.isLive) {
+                    console.log('Loading stream from checkStreamStatus:', data.playbackUrl);
                     this.loadStream(data.playbackUrl);
                 }
             }
@@ -174,14 +202,81 @@ class StreamService {
         if (!playbackUrl) return;
 
         try {
+            console.log('loadStream called with URL:', playbackUrl);
+            
             if (this.player && this.player.load) {
+                console.log('Using IVS Player');
                 this.player.load(playbackUrl);
                 this.player.setAutoplay(true);
+                this.player.play();
             } else {
-                // Fallback cho native video
+                // Fallback: Sử dụng HLS.js nếu có
                 const videoElement = document.getElementById('video-player');
-                videoElement.src = playbackUrl;
-                videoElement.load();
+                
+                if (window.Hls && Hls.isSupported()) {
+                    console.log('Using HLS.js');
+                    
+                    // Destroy existing HLS instance if any
+                    if (this.hls) {
+                        this.hls.destroy();
+                    }
+                    
+                    this.hls = new Hls({
+                        enableWorker: true,
+                        lowLatencyMode: true
+                    });
+                    
+                    this.hls.loadSource(playbackUrl);
+                    this.hls.attachMedia(videoElement);
+                    
+                    this.hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                        console.log('HLS manifest parsed, starting playback');
+                        videoElement.play().catch(err => {
+                            console.log('Autoplay blocked, user interaction required:', err);
+                        });
+                    });
+                    
+                    this.hls.on(Hls.Events.ERROR, (event, data) => {
+                        console.error('HLS error:', data);
+                        // Nếu lỗi bufferStalledError, tua về cuối stream
+                        if (data.details === 'bufferStalledError') {
+                            const videoElement = document.getElementById('video-player');
+                            if (videoElement.buffered && videoElement.buffered.length > 0) {
+                                const latest = videoElement.buffered.end(videoElement.buffered.length - 1);
+                                videoElement.currentTime = latest;
+                                videoElement.play();
+                                console.log('Auto seek to live edge due to bufferStalledError:', latest);
+                            }
+                        }
+                        if (data.fatal) {
+                            switch (data.type) {
+                                case Hls.ErrorTypes.NETWORK_ERROR:
+                                    console.error('Fatal network error, trying to recover');
+                                    this.hls.startLoad();
+                                    break;
+                                case Hls.ErrorTypes.MEDIA_ERROR:
+                                    console.error('Fatal media error, trying to recover');
+                                    this.hls.recoverMediaError();
+                                    break;
+                                default:
+                                    console.error('Fatal error, cannot recover');
+                                    this.hls.destroy();
+                                    break;
+                            }
+                        }
+                    });
+                } else if (videoElement.canPlayType('application/vnd.apple.mpegurl')) {
+                    // Native HLS support (Safari)
+                    console.log('Using native HLS support');
+                    videoElement.src = playbackUrl;
+                    videoElement.load();
+                    videoElement.play().catch(err => {
+                        console.log('Autoplay blocked, user interaction required:', err);
+                    });
+                } else {
+                    console.error('No HLS support available');
+                    showToast('Trình duyệt không hỗ trợ phát video này', 'error');
+                }
             }
         } catch (error) {
             console.error('Failed to load stream:', error);
@@ -190,10 +285,12 @@ class StreamService {
     }
 
     updateUI(streamData) {
-        const startBtn = document.getElementById('start-stream');
-        const stopBtn = document.getElementById('stop-stream');
-        const streamKey = document.getElementById('stream-key');
-        const streamTitle = document.getElementById('stream-title');
+    const startBtn = document.getElementById('start-stream');
+    const stopBtn = document.getElementById('stop-stream');
+    const streamKey = document.getElementById('stream-key');
+    const streamTitle = document.getElementById('stream-title');
+    const ingestServer = document.getElementById('ingest-server');
+    const copyIngestBtn = document.getElementById('copy-ingest');
 
         if (streamData) {
             // Cập nhật stream key
@@ -201,9 +298,31 @@ class StreamService {
                 streamKey.value = streamData.streamKey;
             }
 
+            // Cập nhật ingest server cho OBS
+            if (streamData.ingestEndpoint) {
+                ingestServer.value = `rtmp://${streamData.ingestEndpoint}:1935/app/`;
+            } else {
+                ingestServer.value = '';
+            }
+
             // Cập nhật tiêu đề
             if (streamData.title) {
                 streamTitle.textContent = streamData.title;
+            }
+
+            // Sự kiện copy ingest server
+            if (copyIngestBtn) {
+                copyIngestBtn.onclick = () => {
+                    if (ingestServer.value) {
+                        navigator.clipboard.writeText(ingestServer.value).then(() => {
+                            showToast('Ingest server đã được sao chép!', 'success');
+                        }).catch((error) => {
+                            showToast('Không thể sao chép ingest server', 'error');
+                        });
+                    } else {
+                        showToast('Không có ingest server để sao chép', 'warning');
+                    }
+                };
             }
 
             // Cập nhật trạng thái buttons
@@ -211,6 +330,12 @@ class StreamService {
                 startBtn.disabled = true;
                 stopBtn.disabled = false;
                 this.updateStreamStatus(true);
+                
+                // Load stream khi đang live (bỏ kiểm tra !this.isLive)
+                if (streamData.playbackUrl) {
+                    console.log('Loading stream from updateUI:', streamData.playbackUrl);
+                    this.loadStream(streamData.playbackUrl);
+                }
             } else {
                 startBtn.disabled = false;
                 stopBtn.disabled = true;
@@ -272,5 +397,22 @@ class StreamService {
     }
 }
 
-// Initialize stream service
-const streamService = new StreamService();
+// Initialize stream service after DOM and IVS Player are ready
+let streamService;
+
+function initStreamService() {
+    if (!streamService) {
+        streamService = new StreamService();
+    }
+}
+
+// Wait for DOM and IVS Player script to be ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        // Give IVS Player script time to load
+        setTimeout(initStreamService, 100);
+    });
+} else {
+    // DOM already loaded, init immediately
+    setTimeout(initStreamService, 100);
+}

@@ -1,5 +1,5 @@
 const express = require('express');
-const { IVSClient, CreateChannelCommand, GetChannelCommand, StopStreamCommand, GetStreamCommand, ListStreamsCommand } = require('@aws-sdk/client-ivs');
+const { IvsClient, CreateChannelCommand, GetChannelCommand, StopStreamCommand, GetStreamCommand, ListStreamsCommand } = require('@aws-sdk/client-ivs');
 const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
 const { DynamoDBDocumentClient, PutCommand, GetCommand, UpdateCommand, QueryCommand } = require('@aws-sdk/lib-dynamodb');
 const { authenticateToken } = require('./auth');
@@ -7,7 +7,7 @@ const { authenticateToken } = require('./auth');
 const router = express.Router();
 
 // Initialize AWS clients
-const ivsClient = new IVSClient({
+const ivsClient = new IvsClient({
     region: process.env.AWS_REGION || 'us-east-1'
 });
 
@@ -23,24 +23,27 @@ router.get('/status', authenticateToken, async (req, res) => {
     try {
         const userId = req.user.sub;
 
-        // Get user's stream from DynamoDB
-        const getParams = {
+        // Query user's streams from DynamoDB (using Query instead of Get because of composite key)
+        const queryParams = {
             TableName: STREAMS_TABLE,
-            Key: {
-                userId: userId
-            }
+            KeyConditionExpression: 'userId = :userId',
+            ExpressionAttributeValues: {
+                ':userId': userId
+            },
+            ScanIndexForward: false, // Get latest first
+            Limit: 1
         };
 
-        const result = await docClient.send(new GetCommand(getParams));
+        const result = await docClient.send(new QueryCommand(queryParams));
         
-        if (!result.Item) {
+        if (!result.Items || result.Items.length === 0) {
             return res.json({
                 hasStream: false,
                 message: 'Chưa có stream nào được tạo'
             });
         }
 
-        const streamData = result.Item;
+        const streamData = result.Items[0]; // Get the latest stream
 
         // Check current stream status from IVS
         try {
@@ -82,7 +85,8 @@ router.get('/status', authenticateToken, async (req, res) => {
             const updateParams = {
                 TableName: STREAMS_TABLE,
                 Key: {
-                    userId: userId
+                    userId: userId,
+                    createdAt: streamData.createdAt // Include sort key
                 },
                 UpdateExpression: 'SET isLive = :isLive, lastChecked = :lastChecked, viewerCount = :viewerCount',
                 ExpressionAttributeValues: {
@@ -118,18 +122,21 @@ router.post('/start', authenticateToken, async (req, res) => {
         const { title = 'Live Stream' } = req.body;
 
         // Check if user already has a stream
-        const getParams = {
+        const queryParams = {
             TableName: STREAMS_TABLE,
-            Key: {
-                userId: userId
-            }
+            KeyConditionExpression: 'userId = :userId',
+            ExpressionAttributeValues: {
+                ':userId': userId
+            },
+            ScanIndexForward: false,
+            Limit: 1
         };
 
-        const existingResult = await docClient.send(new GetCommand(getParams));
+        const existingResult = await docClient.send(new QueryCommand(queryParams));
         
-        if (existingResult.Item) {
+        if (existingResult.Items && existingResult.Items.length > 0) {
             // User already has a stream, return existing data
-            const streamData = existingResult.Item;
+            const streamData = existingResult.Items[0];
             
             // Get channel info from IVS
             const channelParams = {
@@ -216,23 +223,26 @@ router.post('/stop', authenticateToken, async (req, res) => {
     try {
         const userId = req.user.sub;
 
-        // Get user's stream from DynamoDB
-        const getParams = {
+        // Query user's stream from DynamoDB
+        const queryParams = {
             TableName: STREAMS_TABLE,
-            Key: {
-                userId: userId
-            }
+            KeyConditionExpression: 'userId = :userId',
+            ExpressionAttributeValues: {
+                ':userId': userId
+            },
+            ScanIndexForward: false,
+            Limit: 1
         };
 
-        const result = await docClient.send(new GetCommand(getParams));
+        const result = await docClient.send(new QueryCommand(queryParams));
         
-        if (!result.Item) {
+        if (!result.Items || result.Items.length === 0) {
             return res.status(404).json({
                 message: 'Không tìm thấy stream'
             });
         }
 
-        const streamData = result.Item;
+        const streamData = result.Items[0];
 
         // Stop stream on IVS
         const stopParams = {
@@ -250,7 +260,8 @@ router.post('/stop', authenticateToken, async (req, res) => {
         const updateParams = {
             TableName: STREAMS_TABLE,
             Key: {
-                userId: userId
+                userId: userId,
+                createdAt: streamData.createdAt // Include sort key
             },
             UpdateExpression: 'SET isLive = :isLive, lastUpdated = :lastUpdated, viewerCount = :viewerCount',
             ExpressionAttributeValues: {

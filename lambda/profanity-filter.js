@@ -4,12 +4,21 @@
  * Integrates with IVS Chat as a message review handler
  */
 
-const { IvschatClient, SendEventCommand } = require('@aws-sdk/client-ivschat');
+// Lazy load AWS SDK only when needed
+let IvschatClient, SendEventCommand, ivschatClient;
 
-// Initialize IVS Chat client
-const ivschatClient = new IvschatClient({ 
-    region: process.env.AWS_REGION || 'us-east-1' 
-});
+try {
+    const awsSdk = require('@aws-sdk/client-ivschat');
+    IvschatClient = awsSdk.IvschatClient;
+    SendEventCommand = awsSdk.SendEventCommand;
+    
+    // Initialize IVS Chat client
+    ivschatClient = new IvschatClient({ 
+        region: process.env.AWS_REGION || 'us-east-1' 
+    });
+} catch (error) {
+    console.log('AWS SDK not available (running in test mode)');
+}
 
 // Danh sách các từ tục tĩu cần lọc (10 từ ví dụ - có thể thay đổi)
 const PROFANITY_LIST = [

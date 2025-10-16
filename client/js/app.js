@@ -171,7 +171,13 @@ class App {
 
     async updateViewerCount() {
         try {
-            const response = await fetch('/api/stream/viewers');
+            // Lấy channelArn từ streamService
+            const streamData = streamService.getCurrentStreamData();
+            if (!streamData || !streamData.channelArn) {
+                return; // Không có stream data, bỏ qua
+            }
+
+            const response = await fetch(`/api/stream/viewers?channelArn=${encodeURIComponent(streamData.channelArn)}`);
             if (response.ok) {
                 const data = await response.json();
                 if (data.viewerCount !== undefined) {

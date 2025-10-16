@@ -1,0 +1,28 @@
+{
+  "name": "ivs-chat-profanity-filter",
+  "version": "1.0.0",
+  "description": "AWS Lambda function to filter profanity in IVS Chat messages",
+  "main": "profanity-filter.js",
+  "scripts": {
+    "test": "node test-profanity-filter.js",
+    "package": "zip -r profanity-filter.zip profanity-filter.js package.json node_modules/",
+    "deploy": "aws lambda update-function-code --function-name ivs-chat-profanity-filter --zip-file fileb://profanity-filter.zip"
+  },
+  "keywords": [
+    "aws",
+    "lambda",
+    "ivs",
+    "chat",
+    "profanity",
+    "filter"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@aws-sdk/client-ivschat": "^3.600.0"
+  },
+  "devDependencies": {},
+  "engines": {
+    "node": ">=18.x"
+  }
+}
