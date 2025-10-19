@@ -52,20 +52,13 @@
                     <form id="register-form-element">
                         <input type="text" id="register-username" placeholder="Tên người dùng" required>
                         <input type="email" id="register-email" placeholder="Email" required>
-                        <input type="password" id="register-password" placeholder="Mật khẩu" required>
+                        <input type="password" id="register-password" placeholder="Mật khẩu (tối thiểu 8 ký tự)" required minlength="8">
                         <button type="submit" class="btn btn-primary">Đăng ký</button>
                     </form>
                     <p>Đã có tài khoản? <a href="#" id="switch-to-login">Đăng nhập</a></p>
                 </div>
                 
-                <div id="confirm-form" class="auth-form hidden">
-                    <h2>Xác nhận email</h2>
-                    <p>Vui lòng nhập mã xác nhận đã gửi đến email của bạn.</p>
-                    <form id="confirm-form-element">
-                        <input type="text" id="confirm-code" placeholder="Mã xác nhận" required>
-                        <button type="submit" class="btn btn-primary">Xác nhận</button>
-                    </form>
-                </div>
+                <!-- Confirm form removed - auto-confirm enabled -->
             </div>
         </div>
 

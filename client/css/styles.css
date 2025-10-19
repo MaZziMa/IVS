@@ -28,6 +28,8 @@ body {
     justify-content: space-between;
     align-items: center;
     box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+    position: relative;
+    z-index: 1000;
 }
 
 .header h1 {
@@ -541,7 +543,7 @@ body {
     min-width: 220px;
     box-shadow: 0 4px 16px rgba(0,0,0,0.12);
     border-radius: 8px;
-    z-index: 100;
+    z-index: 10000;
     padding: 1rem;
 }
 .dropdown-menu.hidden {

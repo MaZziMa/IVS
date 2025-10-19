@@ -2,6 +2,7 @@
  * AWS Lambda Function - IVS Chat Profanity Filter
  * Filters profane words from AWS IVS Chat messages
  * Integrates with IVS Chat as a message review handler
+ * Supports Vietnamese and English profanity detection
  */
 
 // Lazy load AWS SDK only when needed
@@ -20,18 +21,41 @@ try {
     console.log('AWS SDK not available (running in test mode)');
 }
 
-// Danh sách các từ tục tĩu cần lọc (10 từ ví dụ - có thể thay đổi)
-const PROFANITY_LIST = [
-    'damn',
-    'hell',
-    'crap',
-    'stupid',
-    'idiot',
-    'jerk',
-    'fool',
-    'dumb',
-    'loser',
-    'moron'
+// Danh sách từ tục tĩu tiếng Việt
+const VIETNAMESE_PROFANITY = [
+    // Từ tục phổ biến (đã làm nhẹ)
+    'đ.m', 'đ.m.m', 'd.m', 'vcl', 'vl', 'cc', 'cl', 'dcm', 'dmm',
+    'đ.t', 'd.t', 'dit', 'đit', 'lol', 'loz', 'lồn', 'buồi',
+    'cặc', 'cak', 'cak', 'đ.đ', 'd.d', 'đ.b', 'd.b',
+    'ngu', 'ngốc', 'khùng', 'điên', 'óc chó', 'óc lợn',
+    'đồ ngu', 'đồ khùng', 'đồ điên', 'con chó', 'con lợn',
+    'thằng ngu', 'thằng khùng', 'thằng điên',
+    'đ.c', 'd.c', 'đụ', 'đéo', 'deo', 'đ.e.o', 'd.e.o',
+    'địt', 'đ.ị.t', 'd.i.t', 'bố láo', 'mẹ mày', 'cha mày',
+    'đồ chó', 'đồ lợn', 'súc vật', 'súc sinh'
+];
+
+// Danh sách từ tục tiếng Anh
+const ENGLISH_PROFANITY = [
+    'fuck', 'shit', 'damn', 'hell', 'ass', 'bitch', 'bastard',
+    'crap', 'dick', 'pussy', 'cock', 'piss', 'asshole',
+    'motherfucker', 'fck', 'fuk', 'sht', 'btch', 'b1tch',
+    'stupid', 'idiot', 'retard', 'moron', 'dumb', 'dumbass',
+    'wtf', 'stfu', 'gtfo', 'kys'
+];
+
+// Kết hợp cả hai danh sách
+const PROFANITY_LIST = [...VIETNAMESE_PROFANITY, ...ENGLISH_PROFANITY];
+
+// Patterns đặc biệt (leetspeak, variations)
+const PROFANITY_PATTERNS = [
+    { pattern: /đ+[\s\.]*[mM]+/gi, replacement: '***' },           // đ.m, đ m, đmm
+    { pattern: /v+[\s\.]*c+[\s\.]*l+/gi, replacement: '***' },     // vcl, v.c.l
+    { pattern: /c+[\s\.]*[cC]+/gi, replacement: '**' },            // cc, c.c
+    { pattern: /đ+[\s\.]*[cC]+/gi, replacement: '**' },            // đc, đ.c
+    { pattern: /f+[\s\.]*u+[\s\.]*c+[\s\.]*k+/gi, replacement: '****' }, // fuck, f.u.c.k
+    { pattern: /s+[\s\.]*h+[\s\.]*[i1]+[\s\.]*t+/gi, replacement: '****' }, // shit, sh1t
+    { pattern: /b+[\s\.]*[i1]+[\s\.]*t+[\s\.]*c+[\s\.]*h+/gi, replacement: '*****' }, // bitch
 ];
 
 /**
@@ -46,10 +70,18 @@ function filterProfanity(text) {
 
     let filteredText = text;
     
-    // Lọc từng từ trong danh sách
+    // Bước 1: Lọc theo patterns đặc biệt
+    PROFANITY_PATTERNS.forEach(({ pattern, replacement }) => {
+        filteredText = filteredText.replace(pattern, replacement);
+    });
+    
+    // Bước 2: Lọc từng từ trong danh sách
     PROFANITY_LIST.forEach(word => {
-        // Tạo regex để tìm từ (case-insensitive, word boundaries)
-        const regex = new RegExp(`\\b${word}\\b`, 'gi');
+        // Escape special characters trong từ
+        const escapedWord = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        
+        // Tạo regex để tìm từ (case-insensitive, có thể có dấu cách/chấm ở giữa)
+        const regex = new RegExp(`\\b${escapedWord.split('').join('[\\s\\.]*')}\\b`, 'gi');
         
         // Thay thế bằng dấu sao có độ dài bằng từ gốc
         filteredText = filteredText.replace(regex, (match) => {
@@ -70,8 +102,17 @@ function containsProfanity(text) {
         return false;
     }
 
+    // Kiểm tra patterns đặc biệt
+    const hasPatternMatch = PROFANITY_PATTERNS.some(({ pattern }) => {
+        return pattern.test(text);
+    });
+
+    if (hasPatternMatch) return true;
+
+    // Kiểm tra danh sách từ
     return PROFANITY_LIST.some(word => {
-        const regex = new RegExp(`\\b${word}\\b`, 'gi');
+        const escapedWord = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(`\\b${escapedWord}\\b`, 'gi');
         return regex.test(text);
     });
 }

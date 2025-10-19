@@ -135,8 +135,8 @@ class AuthService {
             const result = await response.json();
             
             if (response.ok) {
-                showToast('Đăng ký thành công! Vui lòng kiểm tra email để xác nhận.', 'success');
-                return { success: true, needConfirmation: true, username };
+                showToast('Đăng ký thành công! Bạn có thể đăng nhập ngay.', 'success');
+                return { success: true, needConfirmation: false, email, password }; // Return credentials for auto-login
             } else {
                 throw new Error(result.message || 'Đăng ký thất bại');
             }
@@ -403,10 +403,19 @@ document.addEventListener('DOMContentLoaded', () => {
             const password = document.getElementById('register-password').value;
 
             const result = await authService.register(username, email, password);
-            if (result.success && result.needConfirmation) {
-                // Store username for confirmation
-                sessionStorage.setItem('pendingUsername', username);
-                showConfirmForm();
+            if (result.success) {
+                // Auto-login after successful registration
+                showToast('Đang tự động đăng nhập...', 'info');
+                setTimeout(async () => {
+                    const loginResult = await authService.login(email, password);
+                    if (loginResult.success) {
+                        closeAuthModal();
+                    } else {
+                        // If auto-login fails, show login form
+                        showLoginForm();
+                        showToast('Vui lòng đăng nhập với tài khoản vừa tạo', 'info');
+                    }
+                }, 1000);
             }
         });
     }
@@ -437,6 +446,18 @@ document.addEventListener('DOMContentLoaded', () => {
         if (loginForm) loginForm.classList.add('hidden');
         if (registerForm) registerForm.classList.remove('hidden');
         if (confirmForm) confirmForm.classList.add('hidden');
+    }
+
+    function showConfirmForm() {
+        if (loginForm) loginForm.classList.add('hidden');
+        if (registerForm) registerForm.classList.add('hidden');
+        if (confirmForm) confirmForm.classList.remove('hidden');
+    }
+
+    function closeAuthModal() {
+        if (authModal) {
+            authModal.classList.add('hidden');
+        }
     }
 
     function showConfirmForm() {

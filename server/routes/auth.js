@@ -1,5 +1,5 @@
 const express = require('express');
-const { CognitoIdentityProviderClient, SignUpCommand, ConfirmSignUpCommand, InitiateAuthCommand, GlobalSignOutCommand, AdminGetUserCommand } = require('@aws-sdk/client-cognito-identity-provider');
+const { CognitoIdentityProviderClient, SignUpCommand, ConfirmSignUpCommand, InitiateAuthCommand, GlobalSignOutCommand, AdminGetUserCommand, AdminConfirmSignUpCommand } = require('@aws-sdk/client-cognito-identity-provider');
 const { CognitoJwtVerifier } = require('aws-jwt-verify');
 const crypto = require('crypto');
 const { IvsClient, CreateChannelCommand } = require('@aws-sdk/client-ivs');
@@ -171,10 +171,34 @@ router.post('/register', async (req, res) => {
         const command = new SignUpCommand(params);
         const result = await cognitoClient.send(command);
 
+        // Auto-confirm user (skip email verification)
+        if (!result.UserConfirmed) {
+            try {
+                const confirmParams = {
+                    UserPoolId: process.env.COGNITO_USER_POOL_ID,
+                    Username: email
+                };
+                await cognitoClient.send(new AdminConfirmSignUpCommand(confirmParams));
+                console.log(`✓ Auto-confirmed user: ${email}`);
+            } catch (confirmError) {
+                console.error('Failed to auto-confirm user:', confirmError);
+                // Continue anyway, user might need manual confirmation
+            }
+        }
+
+        // Create channel immediately after registration
+        try {
+            await createChannelForNewUser(result.UserSub, username);
+            console.log(`✓ Channel created for new user: ${username}`);
+        } catch (channelError) {
+            console.error('Failed to create channel for new user:', channelError);
+            // Continue anyway, channel can be created on first login
+        }
+
         res.json({
-            message: 'Đăng ký thành công! Vui lòng kiểm tra email để xác nhận.',
+            message: 'Đăng ký thành công! Bạn có thể đăng nhập ngay.',
             userSub: result.UserSub,
-            needConfirmation: !result.UserConfirmed
+            needConfirmation: false // Always false now
         });
 
     } catch (error) {

@@ -1,5 +1,6 @@
 const WebSocket = require('ws');
 const { CognitoJwtVerifier } = require('aws-jwt-verify');
+const { filterProfanity, containsProfanity, getProfanitySeverity } = require('../utils/profanity-filter');
 
 // Initialize JWT verifier for ID tokens (to get preferred_username)
 const verifier = CognitoJwtVerifier.create({
@@ -291,20 +292,36 @@ async function handleChatMessage(clientId, message) {
         return;
     }
 
+    // Filter profanity
+    const filterResult = filterProfanity(messageText.trim());
+    const finalMessage = filterResult.filtered;
+    
+    // Log if profanity was detected
+    if (filterResult.wasFiltered) {
+        console.log(`⚠️  Profanity filtered for ${client.user.username}: "${filterResult.original}" → "${finalMessage}"`);
+        
+        // Send warning to user
+        sendToClient(clientId, {
+            type: 'warning',
+            message: 'Tin nhắn của bạn chứa ngôn từ không phù hợp và đã được lọc.'
+        });
+    }
+
     // Create chat message
     const chatMessage = {
         type: 'message',
         id: generateMessageId(),
         username: client.user.username || client.user.email,
-        message: messageText.trim(),
+        message: finalMessage,
         timestamp: new Date().toISOString(),
-        room: client.room
+        room: client.room,
+        filtered: filterResult.wasFiltered
     };
 
     // Broadcast to all clients in the room
     broadcastToRoom(client.room, chatMessage);
 
-    console.log(`Chat message from ${client.user.username || client.user.email} in ${client.room}: ${messageText}`);
+    console.log(`Chat message from ${client.user.username || client.user.email} in ${client.room}: ${finalMessage}`);
 }
 
 function handleLogout(clientId) {
